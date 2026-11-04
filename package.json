@@ -1,0 +1,13 @@
+{
+  "name": "tomorqa-bot",
+  "version": "0.1.0",
+  "description": "Online Mahalla 2.0 — Аҳоли томорқаси formalarini sinov rejimida avtomatik to'ldirish (Юбориш bosilmaydi)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/rules.test.js"
+  },
+  "license": "UNLICENSED",
+  "type": "commonjs"
+}

@@ -1,0 +1,7 @@
+node_modules/
+# run hisobotlari va xato skrinshotlari — ekranda fuqarolar shaxsiy ma'lumoti bor
+runs/
+# lokal sozlamalar: papka yo'li, GPS nuqta, bot holati
+data/config.json
+data/state.json
+.DS_Store

@@ -1,0 +1,233 @@
+/*
+ * Solid Glass — vanilla CSS porti.
+ * Asl manba: https://github.com/deeplethe/solid-glass (MIT, © deeplethe).
+ * Asl tema shadcn/ui + Tailwind 4 uchun; bu yerda uning tokenlari va "material" qoidalari
+ * (rim + hairline + soya, panel < card < popover qalinligi, bitta holat) oddiy klasslarga ko'chirildi.
+ */
+
+:root {
+  --radius: 0.875rem;
+  --radius-control: 0.7rem;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --background: oklch(0.925 0.007 265);
+  --foreground: oklch(0.16 0 0);
+  --panel: oklch(0.975 0.004 265 / 44%);
+  --card: oklch(0.98 0.004 265 / 60%);
+  --popover: oklch(0.985 0.003 265 / 96%);
+  --primary: oklch(0.2 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.3 0.02 265 / 7%);
+  --muted-foreground: oklch(0.47 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.3 0.02 265 / 13%);
+
+  --glass-rim: oklch(1 0 0 / 90%);
+  --glass-inner: oklch(1 0 0 / 35%);
+  --glass-edge: oklch(0.38 0.03 265 / 10%);
+  --popover-edge: oklch(0.38 0.03 265 / 22%);
+  --popover-under: oklch(0.38 0.03 265 / 16%);
+  --glass-shade: oklch(0.3 0.06 265 / 28%);
+  --glass-contact: oklch(0.25 0.03 265 / 6%);
+  --glass-lift: oklch(0.25 0.03 265 / 14%);
+  --glass-control: oklch(1 0 0 / 55%);
+  --glass-control-rim: oklch(1 0 0 / 80%);
+  --glass-state: oklch(0.3 0.02 265 / 9%);
+  --glass-state-rim: oklch(1 0 0 / 85%);
+  --glass-state-edge: oklch(0.3 0.02 265 / 13%);
+  --hover: oklch(0.3 0.02 265 / 10%);
+  --primary-solid: 88%;
+  --primary-rim: oklch(1 0 0 / 30%);
+  --primary-under: oklch(0 0 0 / 45%);
+  --primary-inner: oklch(1 0 0 / 7%);
+  --primary-edge: oklch(0.2 0 0 / 30%);
+  --field: oklch(1 0 0 / 60%);
+  --field-rim: oklch(1 0 0);
+  --field-edge: oklch(0.3 0.02 265 / 14%);
+  --well-shade: oklch(0.3 0.06 265 / 14%);
+  --well-rim: oklch(1 0 0 / 85%);
+  --focus-line: oklch(0.2 0 0 / 50%);
+  --glass-blur: blur(26px) saturate(180%);
+  --glass-blur-control: blur(14px);
+
+  --light-1: oklch(0.68 0.13 165 / 7%);
+  --light-2: oklch(0.75 0.08 240 / 11%);
+  --light-3: oklch(0.68 0.13 165 / 4%);
+
+  --brand: oklch(0.68 0.13 165);
+  --brand-muted: oklch(0.68 0.13 165 / 12%);
+  --status-running: oklch(0.52 0 0);
+  --status-done: oklch(0.56 0.16 248);
+  --success: oklch(0.58 0.15 152);
+  --status-interrupted: oklch(0.66 0.16 58);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.16 0 0);
+  --foreground: oklch(0.985 0 0);
+  --panel: oklch(1 0 0 / 4.5%);
+  --card: oklch(0.31 0 0 / 46%);
+  --popover: oklch(0.22 0 0 / 96%);
+  --primary: oklch(0.94 0 0);
+  --primary-foreground: oklch(0.18 0 0);
+  --muted: oklch(1 0 0 / 7%);
+  --muted-foreground: oklch(0.72 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 11%);
+  --glass-rim: oklch(1 0 0 / 16%);
+  --glass-inner: oklch(1 0 0 / 4%);
+  --glass-edge: oklch(1 0 0 / 6%);
+  --popover-edge: var(--glass-edge);
+  --popover-under: oklch(0 0 0 / 0%);
+  --glass-shade: oklch(0 0 0 / 60%);
+  --glass-contact: oklch(0 0 0 / 10%);
+  --glass-lift: oklch(0 0 0 / 22%);
+  --glass-control: oklch(1 0 0 / 7%);
+  --glass-control-rim: oklch(1 0 0 / 11%);
+  --glass-state: var(--glass-control);
+  --glass-state-rim: var(--glass-control-rim);
+  --glass-state-edge: var(--glass-edge);
+  --hover: oklch(1 0 0 / 8%);
+  --primary-solid: 86%;
+  --primary-rim: oklch(1 0 0);
+  --primary-under: oklch(0 0 0 / 22%);
+  --primary-inner: oklch(0 0 0 / 7%);
+  --primary-edge: oklch(1 0 0 / 26%);
+  --field: oklch(1 0 0 / 6%);
+  --field-rim: oklch(1 0 0 / 15%);
+  --field-edge: oklch(1 0 0 / 8%);
+  --well-shade: oklch(0 0 0 / 38%);
+  --well-rim: oklch(1 0 0 / 9%);
+  --focus-line: oklch(1 0 0 / 40%);
+  --glass-blur: blur(26px);
+  --light-1: transparent;
+  --light-2: transparent;
+  --light-3: transparent;
+  --brand: oklch(0.78 0.13 166);
+  --brand-muted: oklch(0.78 0.13 166 / 15%);
+  --status-running: oklch(0.72 0 0);
+  --status-done: oklch(0.68 0.15 250);
+  --success: oklch(0.74 0.16 152);
+  --status-interrupted: oklch(0.77 0.15 62);
+}
+
+html { -webkit-font-smoothing: antialiased; font-family: var(--font-sans); }
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  background-image:
+    radial-gradient(62rem 42rem at 12% -6rem, var(--light-1), transparent 62%),
+    radial-gradient(52rem 38rem at 92% 4rem, var(--light-2), transparent 60%),
+    radial-gradient(64rem 46rem at 55% 110%, var(--light-3), transparent 62%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* ---- Material: panel < card < popover ---- */
+.glass-panel, .glass-card, .glass-popover { -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border: 0; }
+.glass-panel { background-color: var(--panel); }
+.glass-card { background-color: var(--card); }
+.glass-panel, .glass-card {
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    inset 0 0 0 1px var(--glass-inner),
+    0 0 0 1px var(--glass-edge),
+    0 1px 2px var(--glass-contact),
+    0 12px 32px -14px var(--glass-shade);
+}
+.glass-popover {
+  background-color: var(--popover);
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    inset 0 -1px 0 var(--popover-under),
+    0 0 0 1px var(--popover-edge),
+    0 24px 60px -18px var(--glass-shade),
+    0 6px 16px -6px var(--glass-lift);
+}
+
+/* Shaffof kichik shisha: oddiy tugma, teg */
+.glass-control {
+  background-color: var(--glass-control);
+  -webkit-backdrop-filter: var(--glass-blur-control);
+  backdrop-filter: var(--glass-blur-control);
+  box-shadow: inset 0 1px 0 var(--glass-rim), 0 0 0 1px var(--glass-edge), 0 1px 2px var(--glass-contact);
+}
+.glass-control:hover:not(:disabled) { background-color: var(--hover); }
+
+/* Asosiy tugma: siyoh rangidagi qattiq shisha */
+.glass-primary {
+  color: var(--primary-foreground);
+  background-color: color-mix(in oklch, var(--primary) var(--primary-solid), transparent);
+  -webkit-backdrop-filter: var(--glass-blur-control);
+  backdrop-filter: var(--glass-blur-control);
+  border: 1px solid color-mix(in oklab, var(--primary) 55%, var(--primary-edge));
+  box-shadow:
+    inset 0 1px 0 var(--primary-rim),
+    inset 0 -1px 0 var(--primary-under),
+    inset 0 0 0 1px var(--primary-inner),
+    0 1px 2px var(--glass-contact),
+    0 8px 18px -9px var(--glass-shade);
+}
+.glass-primary:hover:not(:disabled) { background-color: color-mix(in oklch, var(--primary) calc(var(--primary-solid) - 10%), transparent); }
+.glass-primary:active:not(:disabled) {
+  box-shadow: inset 0 1px 0 var(--primary-rim), inset 0 -1px 0 var(--primary-under), inset 0 0 0 1px var(--primary-inner), 0 1px 1px var(--glass-contact);
+}
+
+/* Bitta holat: tanlangan, ochiq, faol — hammasi bir xil kichik shaffof oyna */
+.glass-chosen {
+  background-color: var(--glass-state);
+  box-shadow: inset 0 1px 0 var(--glass-state-rim), 0 0 0 1px var(--glass-state-edge);
+}
+
+/* Maydon: yozish uchun shaffof oyna */
+.glass-field {
+  background-color: var(--field);
+  background-clip: padding-box;
+  border: 1px solid var(--field-edge);
+  box-shadow: inset 0 1px 0 var(--field-rim);
+  color: var(--foreground);
+  outline: none;
+}
+.glass-field:focus-visible { border-color: var(--focus-line); }
+
+/* Ariqcha (progress yo'li) */
+.glass-well {
+  background-color: var(--muted);
+  box-shadow: inset 0 1px 2px var(--well-shade), inset 0 -1px 0 var(--well-rim);
+}
+.glass-fill {
+  background-color: color-mix(in oklch, var(--primary) var(--primary-solid), transparent);
+  box-shadow: inset 0 1px 0 var(--primary-rim), inset 0 -1px 0 color-mix(in oklch, var(--primary-under) 45%, transparent);
+}
+
+/* ---- Harakat: faqat nimadir ishlayotganini bildiradi ---- */
+@keyframes sg-dot-flash { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+@keyframes sg-status-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@keyframes sg-sweep { from { transform: translateX(0); } to { transform: translateX(386%); } }
+@keyframes sg-float-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.status-shimmer {
+  background-image: linear-gradient(100deg, var(--muted-foreground) 35%, var(--foreground) 50%, var(--muted-foreground) 65%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: sg-status-shimmer 2.4s linear infinite;
+}
+.progress-glow { position: relative; overflow: hidden; }
+.progress-glow::after {
+  content: ""; position: absolute; inset-block: 0; inset-inline-start: -35%; width: 35%;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 70%), transparent);
+  animation: sg-sweep 1.6s ease-in-out infinite;
+}
+.animate-float-in { animation: sg-float-in 220ms cubic-bezier(.22, 1, .36, 1); }
+.dot-loader { display: inline-flex; gap: 3px; }
+.dot-loader i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: sg-dot-flash 1.2s ease-in-out infinite; }
+.dot-loader i:nth-child(2) { animation-delay: .15s; }
+.dot-loader i:nth-child(3) { animation-delay: .3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .status-shimmer, .progress-glow::after, .dot-loader i, .animate-float-in { animation: none; }
+  .status-shimmer { color: var(--foreground); background: none; }
+}

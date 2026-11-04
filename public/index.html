@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Томорқа бот</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="solid-glass.css">
+<script>try{const t=localStorage.getItem('theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch{}</script>
+<style>
+*{box-sizing:border-box}
+/* Bitta viewport: sahifa scroll qilinmaydi, faqat natijalar ro'yxati (va kerak bo'lsa sozlash) ichida aylanadi */
+html,body{height:100%}
+body{font-size:14px;line-height:1.45;display:flex;flex-direction:column;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:var(--radius-control);padding:9px 14px;font-weight:500;white-space:nowrap}
+button:disabled{opacity:.45;cursor:not-allowed}
+.muted{color:var(--muted-foreground)}
+.small{font-size:12px}
+.mono{font-family:var(--font-mono)}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1;min-width:0}
+
+/* ---- sarlavha ---- */
+header{flex:none;position:relative;z-index:10;display:flex;align-items:center;gap:12px;padding:10px 20px;border-radius:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.brand svg{width:26px;height:26px;color:var(--brand)}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:99px}
+.tag.warn{color:var(--status-interrupted)}
+.tag.ok{color:var(--success)}
+.small.ok{color:var(--success)}.small.warn{color:var(--status-interrupted)}
+.tag.err{color:var(--destructive)}
+.status{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.icon-btn{padding:7px;width:34px;height:34px;display:grid;place-items:center}
+.icon-btn svg{width:18px;height:18px}
+
+/* ---- joylashuv ---- */
+main{flex:1;min-height:0;width:100%;max-width:1600px;margin:0 auto;display:grid;grid-template-columns:360px minmax(0,1fr) auto;gap:14px;padding:14px 20px}
+main>section{min-height:0}
+.setup{overflow:auto;scrollbar-width:thin}
+.stack{display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:14px}
+.results-card{display:flex;flex-direction:column;min-height:0}
+#results{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;margin:0 -4px;padding:0 4px 2px}
+/* Telefon ustuni kengligi ekran balandligidan kelib chiqadi */
+.phone-col{display:flex;min-height:0}
+@media (max-width:1180px){main{grid-template-columns:340px minmax(0,1fr)}.phone-col{display:none}}
+/* Kichik ekranda bitta viewport sig'maydi — oddiy scroll */
+@media (max-width:760px),(max-height:560px){body{overflow:auto;height:auto}html{height:auto}main{grid-template-columns:1fr;padding:12px 16px}.stack{grid-template-rows:none}.setup{overflow:visible}#results{max-height:60vh}header{padding:10px 16px}.hide-sm{display:none}}
+.card{border-radius:var(--radius);padding:14px 16px}
+h2{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin:0 0 10px;color:var(--muted-foreground);display:flex;align-items:center;gap:8px}
+.num{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:11px;color:var(--foreground)}
+.sep{height:1px;background:var(--border);margin:14px 0}
+
+/* ---- maydonlar ---- */
+label.lbl{display:block;font-size:12px;color:var(--muted-foreground);margin:10px 0 5px}
+.glass-field{width:100%;padding:8px 11px;border-radius:var(--radius-control)}
+select.glass-field{appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:28px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border-radius:calc(var(--radius-control) + 4px)}
+.seg button{background:transparent;padding:7px 6px;font-size:13px}
+.seg button[aria-pressed="true"]{font-weight:600}
+.stepper{display:flex;align-items:center;border-radius:var(--radius-control);overflow:hidden}
+.stepper button{background:transparent;padding:8px 12px;border-radius:0}
+.stepper input{width:100%;text-align:center;border:0;background:transparent;padding:8px 0;outline:none}
+.stepper input::-webkit-inner-spin-button{display:none}
+details.more summary{cursor:pointer;list-style:none;font-size:13px;color:var(--muted-foreground);margin-top:14px;display:flex;align-items:center;gap:6px}
+details.more summary::before{content:"›";display:inline-block;transition:transform .15s}
+details.more[open] summary::before{transform:rotate(90deg)}
+
+/* ---- qurilmalar ---- */
+.dev{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-control);cursor:pointer;width:100%;text-align:left;background:transparent}
+.dev:hover{background:var(--hover)}
+.dev svg{width:22px;height:22px;flex:none;color:var(--muted-foreground)}
+.dev b{font-weight:500;display:block}
+.dev .small{display:block}
+.empty{padding:14px;border-radius:var(--radius-control);text-align:center}
+
+/* ---- rasmlar ---- */
+.thumbs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.thumbs:empty{display:none}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--muted)}
+
+/* ---- amallar ---- */
+.actions{display:grid;grid-template-columns:auto 1fr;gap:8px;margin-top:14px}
+.actions .big{padding:11px 16px;font-size:15px}
+.reason{margin-top:8px;font-size:12px;color:var(--status-interrupted);min-height:16px}
+.danger{color:var(--destructive)}
+
+/* ---- statistika ---- */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{padding:10px 14px;border-radius:var(--radius-control)}
+.stat b{display:block;font-size:24px;line-height:1.2;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.todo b{color:var(--destructive)}
+.bar{height:8px;border-radius:99px;overflow:hidden;margin-top:12px}
+.bar i{display:block;height:100%;width:0;border-radius:99px;transition:width .4s}
+
+/* ---- bosqichlar ---- */
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.steps div{padding:6px 4px;border-radius:var(--radius-control);text-align:center;font-size:12px;line-height:1.3;color:var(--muted-foreground)}
+.steps div span{display:block;font-weight:600;font-size:13px;margin-bottom:2px}
+.steps div.done{color:var(--foreground)}
+.steps div.done span::after{content:" ✓";color:var(--success)}
+.steps div.now{color:var(--foreground)}
+.kpis{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:13px}
+.kpis b{font-variant-numeric:tabular-nums}
+
+/* ---- natijalar ---- */
+.res{padding:12px 14px;border-radius:var(--radius-control)}
+.res+.res{margin-top:8px}
+.res-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.res-head b{font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chip{font-size:12px;padding:3px 8px;border-radius:99px}
+.chip.gh{color:var(--status-done)}
+.chip.tree{color:var(--success)}
+.res.fail .res-head{color:var(--destructive)}
+.res .err{font-size:12px;margin-top:6px;color:var(--muted-foreground);word-break:break-word}
+
+/* ---- telefon ---- */
+.phone{border-radius:30px;padding:10px;display:flex;flex-direction:column;min-height:0;height:100%}
+.phone img{display:block;flex:1;min-height:0;height:100%;width:auto;max-width:300px;aspect-ratio:1080/2400;object-fit:contain;border-radius:22px;background:#000;margin:0 auto}
+.phone .row{justify-content:space-between;padding:8px 4px 0;flex:none}
+
+/* ---- xabarlar ---- */
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50;max-width:min(420px,calc(100vw - 32px))}
+.toast{padding:11px 14px;border-radius:var(--radius-control);font-size:13px}
+.toast.error{color:var(--destructive)}
+</style>
+</head>
+<body>
+<header class="glass-panel">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"/><path d="M12 11c0-4 3-7 8-7 0 5-3 8-8 7Z"/><path d="M12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6.5 7 5.5Z"/><path d="M4 21h16"/></svg>
+    Томорқа бот
+  </div>
+  <span class="tag glass-control hide-sm" title="Bot 5-bosqichda to'xtaydi va saqlamasdan chiqadi">Sinov rejimi · «Юбориш» bosilmaydi</span>
+  <div class="status" id="status"><span class="muted">Tayyor</span></div>
+  <button class="glass-control icon-btn" id="theme" title="Mavzu" aria-label="Mavzuni almashtirish">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+</header>
+
+<main>
+  <!-- ===== Sozlash ===== -->
+  <section class="glass-card card setup">
+    <h2><span class="num glass-control">1</span>Qurilma
+      <button class="glass-control icon-btn" id="refresh" style="margin-left:auto;width:28px;height:28px;padding:5px" title="Yangilash" aria-label="Qurilmalarni yangilash">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+      </button>
+    </h2>
+    <div id="devices"></div>
+    <div id="emuBox">
+      <label class="lbl" for="avd">Emulator</label>
+      <div class="row"><select id="avd" class="glass-field grow"></select><button class="glass-control" id="emu">Ishga tushirish</button></div>
+    </div>
+
+    <div class="sep"></div>
+    <h2><span class="num glass-control">2</span>Tomorqa rasmlari</h2>
+    <div class="row">
+      <input id="photosDir" class="glass-field grow" placeholder="Papkani tanlang…" spellcheck="false">
+      <button class="glass-control" id="pick">Tanlash…</button>
+    </div>
+    <div class="small muted" id="phint" style="margin-top:6px">Emulatorda har xonadonga papkadan tasodifiy rasm qo'yiladi.</div>
+    <div class="thumbs" id="thumbs"></div>
+
+    <div class="sep"></div>
+    <h2><span class="num glass-control">3</span>Ish</h2>
+    <label class="lbl">Mavsum</label>
+    <div class="seg glass-well" id="season" role="group" aria-label="Mavsum">
+      <button data-v="Асосий">Асосий</button><button data-v="Такрорий">Такрорий</button><button data-v="Тўқсонбости">Тўқсонбости</button>
+    </div>
+    <label class="lbl" for="limit">Xonadonlar soni</label>
+    <div class="stepper glass-field"><button data-step="-1" aria-label="Kamaytirish">−</button><input id="limit" type="number" min="1" value="3"><button data-step="1" aria-label="Ko'paytirish">+</button></div>
+    <div class="row" style="gap:10px;align-items:flex-end">
+      <div class="grow"><label class="lbl" for="lat">Joylashuv: kenglik (N)</label><input id="lat" class="glass-field" inputmode="decimal" placeholder="40.8528" value="41.0806"></div>
+      <div class="grow"><label class="lbl" for="lon">Joylashuv: uzunlik (E)</label><input id="lon" class="glass-field" inputmode="decimal" placeholder="71.7758" value="71.9236"></div>
+      <button class="glass-control" id="geoSet" title="Formadagi nuqtani emulatorga qo'yish">↻ Qo'yish</button>
+    </div>
+    <div class="small muted" id="geoNow" style="margin-top:6px">2-bosqichdagi «Жойлашув» shu nuqta bo'ladi (emulatorda). Telefonda — telefonning haqiqiy GPS'i.</div>
+    <div class="row" style="gap:10px">
+      <div class="grow"><label class="lbl" for="treeEvery">Daraxt: har N tadan 1</label><input id="treeEvery" class="glass-field" type="number" min="1" value="10"></div>
+      <div class="grow"><label class="lbl" for="ghEvery">Issiqxona: har N tadan 1</label><input id="ghEvery" class="glass-field" type="number" min="1" value="20"></div>
+    </div>
+    <div class="small muted" style="margin-top:6px">Daraxt — umumiy maydon &gt; 4.5 sotix, issiqxona — &gt; 13 sotix bo'lgan xonadonlar orasidan. Daraxt tushmasa, butun maydon ekinlarga beriladi.</div>
+    <details class="more">
+      <summary>Qo'shimcha sozlamalar</summary>
+      <div class="row" style="gap:10px">
+        <div class="grow"><label class="lbl" for="reviewSec">Tasdiqlashda kutish, s</label><input id="reviewSec" class="glass-field" type="number" min="0" value="3"></div>
+      </div>
+    </details>
+
+    <div class="actions">
+      <button class="glass-control big" id="count" title="Хатлов қилинмаганлар sonini o'qish">Hisoblash</button>
+      <button class="glass-primary big" id="start">Boshlash</button>
+    </div>
+    <div class="reason" id="reason"></div>
+  </section>
+
+  <!-- ===== Holat va natijalar ===== -->
+  <section class="stack">
+    <div class="glass-card card">
+      <h2>Mahalla holati <span class="small muted" id="statsAt" style="text-transform:none;letter-spacing:0;font-weight:400;margin-left:auto"></span></h2>
+      <div class="stats">
+        <div class="stat glass-control"><b id="sDone">—</b><span class="small muted">Хатлов қилинган</span></div>
+        <div class="stat glass-control todo"><b id="sTodo">—</b><span class="small muted">Хатлов қилинмаган</span></div>
+        <div class="stat glass-control"><b id="sTotal">—</b><span class="small muted">Жами</span></div>
+      </div>
+      <div class="bar glass-well"><i class="glass-fill" id="sBar"></i></div>
+    </div>
+
+    <div class="glass-card card" id="runCard">
+      <h2>Joriy ish</h2>
+      <div class="row"><span id="runTitle" class="grow">Ish boshlanmagan</span><button class="glass-control danger" id="stop" hidden>To'xtatish</button></div>
+      <div class="bar glass-well"><i class="glass-fill" id="pBar"></i></div>
+      <div class="kpis">
+        <span><span class="muted">Bajarildi</span> <b id="kOk">0</b></span>
+        <span><span class="muted">Xato</span> <b id="kFail">0</b></span>
+        <span><span class="muted">O'rtacha</span> <b id="kAvg">—</b></span>
+        <span><span class="muted">Qoldi</span> <b id="kEta">—</b></span>
+      </div>
+      <div class="steps" id="steps"></div>
+    </div>
+
+    <div class="glass-card card results-card">
+      <h2>Natijalar
+        <span style="margin-left:auto;display:flex;gap:6px;text-transform:none;letter-spacing:0">
+          <button class="glass-control small" id="csv" disabled>CSV yuklab olish</button>
+          <button class="glass-control small" id="reveal">Papkani ochish</button>
+        </span>
+      </h2>
+      <div id="results"><div class="empty glass-well small muted">Hali natija yo'q. Sozlamalarni to'ldirib «Boshlash»ni bosing.</div></div>
+    </div>
+
+  </section>
+
+  <!-- ===== Ekran ===== -->
+  <section class="phone-col">
+    <div class="phone glass-card">
+      <img id="scr" alt="Qurilma ekrani">
+      <div class="row small muted"><span id="scrHint">Qurilma ekrani</span><button class="glass-control small" id="scrBtn" style="padding:4px 10px">Yangilash</button></div>
+    </div>
+  </section>
+</main>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
