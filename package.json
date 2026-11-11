@@ -1,13 +1,68 @@
 {
   "name": "tomorqa-bot",
   "version": "0.1.0",
-  "description": "Online Mahalla 2.0 — Аҳоли томорқаси formalarini sinov rejimida avtomatik to'ldirish (Юбориш bosilmaydi)",
-  "main": "server.js",
+  "description": "Online Mahalla 2.0 — Аҳоли томорқаси formasini yarim-avtomat to'ldirish (5-bosqichgacha bot, «Юбориш»ni odam bosadi)",
+  "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "start": "node server.js",
-    "test": "node test/rules.test.js"
+    "start": "electron electron/main.js",
+    "web": "node server.js",
+    "test": "node test/rules.test.js && node test/submit.test.js && node test/year.test.js && node test/xlsx.test.js && node test/operator-report.test.js && node test/autosubmit-delay.test.js",
+    "dist": "electron-builder --mac --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
   },
   "license": "UNLICENSED",
-  "type": "commonjs"
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "44.9.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "uz.tomorqa.bot",
+    "productName": "Tomorqa bot",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "package.json",
+      "server.js",
+      "lib/**",
+      "public/**",
+      "electron/**",
+      "fastdump/fastdump.jar",
+      "data/lists.json"
+    ],
+    "asarUnpack": [
+      "fastdump/fastdump.jar"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName} Setup ${version}.${ext}"
+    }
+  }
 }

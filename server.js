@@ -1,31 +1,15 @@
-// Lokal web UI: http://localhost:4173  (npm start)
+// Lokal server + UI: http://localhost:4173. Odatda desktop ilova ichida ishlaydi (npm start); faqat brauzerda: npm run web
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-const { spawn, execFile } = require('child_process');
-const { listDevices, Device, run: adb } = require('./lib/adb');
-const { Bot, CAMFEED } = require('./lib/bot');
+const { listDevices, Device } = require('./lib/adb');
+const { Bot } = require('./lib/bot');
+const { DATA, RUNS, openExternal } = require('./lib/platform');
 
 const PORT = +process.env.PORT || 4173;
-const SDK = process.env.ANDROID_HOME || path.join(os.homedir(), 'Library/Android/sdk');
-const EMULATOR = path.join(SDK, 'emulator/emulator');
-const CFG_FILE = path.join(__dirname, 'data', 'config.json');
-const RUNS = path.join(__dirname, 'runs');
-const IMG_RE = /\.(jpe?g|png|heic|webp)$/i;
+const CFG_FILE = path.join(DATA, 'config.json');
 const ORIGINS = new Set([`http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
-// "40.8528", "40,8528", "40.8528° N" -> 40.8528
-const coord = (v) => { const m = String(v ?? '').replace(',', '.').match(/-?\d+(\.\d+)?/); return m ? +m[0] : null; };
-// O'zbekiston chegarasi: kenglik 37–46 N, uzunlik 55–74 E (almashib qolsa ham ushlanadi)
-function coords(b) {
-  const lat = coord(b.lat), lon = coord(b.lon);
-  if (lat == null || lon == null || lat < 37 || lat > 46 || lon < 55 || lon > 74) {
-    throw new Error(`Joylashuv noto'g'ri: kenglik ${b.lat || '—'}, uzunlik ${b.lon || '—'} (masalan 40.8528 va 71.7758)`);
-  }
-  return { lat, lon };
-}
 const HOSTS = new Set([`localhost:${PORT}`, `127.0.0.1:${PORT}`]);
-let photosDir = null; // eskizlar faqat shu (UI tanlagan) papkadan beriladi
 
 const clients = new Set();
 const history = [];
@@ -38,7 +22,6 @@ function emit(ev) {
   const line = `data: ${JSON.stringify(ev)}\n\n`;
   for (const c of clients) c.write(line);
 }
-const exec = (cmd, args) => new Promise((res) => execFile(cmd, args, { timeout: 120000 }, (e, out) => res(e ? '' : String(out))));
 
 const body = (req) => new Promise((res) => {
   let s = '';
@@ -47,58 +30,13 @@ const body = (req) => new Promise((res) => {
 });
 const json = (res, code, v) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(v)); };
 
-const listAvds = async () => (await exec(EMULATOR, ['-list-avds'])).split('\n').map((s) => s.trim()).filter((s) => s && !s.startsWith('INFO'));
-const photoList = (dir) => (dir && fs.existsSync(dir) && fs.statSync(dir).isDirectory() ? fs.readdirSync(dir).filter((f) => IMG_RE.test(f) && !f.startsWith('.')) : []);
-
-// Emulator rasmni papkadan oladimi: AVD jarayoni `-camera-back imagefile:` bilan ishga tushganmi
-async function emulatorInfo(serial) {
-  const avd = (await adb(['-s', serial, 'emu', 'avd', 'name']).catch(() => '')).split('\n')[0].trim();
-  const ps = await exec('ps', ['-axww', '-o', 'command=']);
-  const line = ps.split('\n').find((l) => l.includes('qemu-system') && l.includes(`-avd ${avd}`)) || '';
-  return { avd, camOk: line.includes(`imagefile:${CAMFEED}`) };
-}
-
-function startEmulator(avd) {
-  fs.mkdirSync(path.dirname(CAMFEED), { recursive: true });
-  if (!fs.existsSync(CAMFEED)) fs.copyFileSync(path.join(__dirname, 'public', 'placeholder.png'), CAMFEED);
-  // 2 GB RAM'da ilova + uiautomator xotiraga sig'maydi (dump OOM bilan o'ldiriladi) — 4 GB beramiz
-  const p = spawn(EMULATOR, ['-avd', avd, '-memory', '4096', '-no-snapshot-save', '-no-boot-anim', '-camera-back', `imagefile:${CAMFEED}`],
-    { detached: true, stdio: 'ignore' });
-  p.unref();
-}
-
 const routes = {
   'GET /api/devices': async () => {
-    const devices = await listDevices().catch(() => []);
-    for (const d of devices) if (d.emulator && d.state === 'device') Object.assign(d, await emulatorInfo(d.serial));
-    return { devices, avds: await listAvds(), running: !!bot, busy: !!busy };
+    // Faqat USB orqali ulangan haqiqiy qurilmalar (emulatorlar ko'rsatilmaydi)
+    const devices = (await listDevices().catch(() => [])).filter((d) => !d.emulator);
+    return { devices, running: !!bot, busy: !!busy };
   },
   'GET /api/config': async () => JSON.parse(fs.existsSync(CFG_FILE) ? fs.readFileSync(CFG_FILE, 'utf8') : '{}'),
-  'POST /api/emulator': async (b) => {
-    if (b.restart) { await adb(['-s', b.restart, 'emu', 'kill']).catch(() => {}); await new Promise((r) => setTimeout(r, 4000)); }
-    startEmulator(b.avd);
-    return { ok: true };
-  },
-  'POST /api/photos': async (b) => {
-    const files = photoList(b.dir);
-    if (files.length) photosDir = path.resolve(b.dir);
-    return { ok: !!b.dir && fs.existsSync(b.dir), count: files.length, sample: files.slice(0, 6) };
-  },
-  'GET /api/thumb': async (b, req, res) => {
-    const q = new URL(req.url, 'http://x').searchParams;
-    const dir = path.resolve(q.get('dir') || ''), name = path.basename(q.get('name') || '');
-    const file = path.join(dir, name);
-    if (dir !== photosDir || !IMG_RE.test(name) || !fs.existsSync(file)) { res.writeHead(404); res.end(); return undefined; }
-    const out = path.join(os.tmpdir(), `tomorqa-thumb-${Buffer.from(file).toString('base64url').slice(-40)}.jpg`);
-    if (!fs.existsSync(out)) await exec('sips', ['-s', 'format', 'jpeg', '-Z', '240', file, '--out', out]);
-    res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=3600' });
-    fs.createReadStream(out).pipe(res);
-    return undefined;
-  },
-  'POST /api/pick-folder': async () => {
-    const p = (await exec('osascript', ['-e', 'POSIX path of (choose folder with prompt "Tomorqa rasmlari papkasini tanlang")'])).trim();
-    return { dir: p.replace(/\/$/, '') };
-  },
   'POST /api/count': async (b) => {
     if (bot || busy) throw new Error('Bot band — avval joriy ishni tugating');
     busy = new Bot({ serial: b.serial, season: b.season }, emit);
@@ -113,32 +51,29 @@ const routes = {
   'POST /api/start': async (b) => {
     if (bot || busy) throw new Error('Bot allaqachon ishlayapti');
     if (!b.serial) throw new Error('Qurilma tanlanmagan');
-    const { lat, lon } = coords(b);
+    if (new Device(b.serial).emulator) throw new Error('Emulator qo\'llab-quvvatlanmaydi — planshetni USB orqali ulang');
     fs.mkdirSync(path.dirname(CFG_FILE), { recursive: true });
     fs.writeFileSync(CFG_FILE, JSON.stringify(b, null, 1));
     bot = new Bot({
-      serial: b.serial, photosDir: b.photosDir, limit: +b.limit || 1, season: b.season,
-      lat, lon, reviewSec: +(b.reviewSec ?? 3), ghEvery: +b.ghEvery || 20, treeEvery: +b.treeEvery || 10,
+      serial: b.serial, limit: +b.limit || 1, season: b.season,
+      submitWaitSec: Math.max(0, +b.submitWaitSec || 0), ghEvery: +b.ghEvery || 20, treeEvery: +b.treeEvery || 10,
+      // Ikki mustaqil toggle (UI checkbox). Berilmasa env standart (AUTO_PHOTO / AUTO_SUBMIT).
+      autoPhoto: b.autoPhoto != null ? !!b.autoPhoto : undefined,
+      autoSubmit: b.autoSubmit != null ? !!b.autoSubmit : undefined,
+      // AUTO_SUBMIT tasodifiy kutish oralig'i (soniya) — bir xil vaqtda joylantirish bo'lmasin
+      autoSubmitDelayMin: Math.max(0, +b.autoSubmitDelayMin || 3),
+      autoSubmitDelayMax: Math.max(0, +b.autoSubmitDelayMax || 8),
+      // Operator profili — reports/<yil>/<n>-xatlov/<operator>.xlsx uchun
+      operator: String(b.operator || '').trim(),
+      // Xatlov: 1|2|3 qo'lda tanlangan, 0/bo'sh — sanadan avtomatik
+      campaign: +b.campaign || 0,
     }, emit);
     emit({ type: 'running', running: true });
     bot.run().finally(() => { bot = null; emit({ type: 'running', running: false }); });
     return { ok: true };
   },
-  // Emulatorning hozirgi GPS nuqtasi
-  'GET /api/geo': async (b, req) => {
-    const d = new Device(new URL(req.url, 'http://x').searchParams.get('serial') || '');
-    return d.emulator ? { emulator: true, ...(await d.location()) } : { emulator: false };
-  },
-  // Formadagi nuqtani emulatorga qo'yish (qurilma qayta o'qib tasdiqlaydi)
-  'POST /api/geo': async (b) => {
-    if (bot) throw new Error('Bot ishlayapti — joylashuv har xonadon oldidan formadagidan qo\'yiladi');
-    const d = new Device(b.serial || '');
-    if (!d.emulator) throw new Error('Joylashuvni faqat emulatorda o\'zgartirish mumkin — telefonda haqiqiy GPS');
-    const { lat, lon } = coords(b);
-    return d.geo(lat, lon);
-  },
   'POST /api/stop': async () => { bot?.stop(); return { ok: true }; },
-  'POST /api/reveal': async () => { fs.mkdirSync(RUNS, { recursive: true }); spawn('open', [RUNS], { stdio: 'ignore' }); return { ok: true }; },
+  'POST /api/reveal': async () => { fs.mkdirSync(RUNS, { recursive: true }); openExternal(RUNS); return { ok: true }; },
   'GET /api/report': async (b, req, res) => {
     const id = path.basename(new URL(req.url, 'http://x').searchParams.get('run') || '');
     const file = path.join(RUNS, id, 'report.csv');
@@ -190,5 +125,5 @@ http.createServer(async (req, res) => {
   } else { res.writeHead(404); res.end('404'); }
 }).listen(PORT, '127.0.0.1', () => {
   console.log(`Tomorqa bot UI: http://localhost:${PORT}`);
-  if (!process.env.NO_OPEN) spawn('open', [`http://localhost:${PORT}`], { stdio: 'ignore' });
+  if (!process.env.NO_OPEN) openExternal(`http://localhost:${PORT}`);
 });

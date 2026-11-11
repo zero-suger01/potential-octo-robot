@@ -5,3 +5,7 @@ runs/
 data/config.json
 data/state.json
 .DS_Store
+dist/
+.buildstate/
+# operator hisobotlari — ommaviy repoga qo'yilmaydi
+reports/
