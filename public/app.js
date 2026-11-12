@@ -95,6 +95,7 @@ function cfg() {
   const c = { serial: S.serial, season: S.season };
   for (const f of FIELDS) c[f] = $(f).value.trim();
   for (const f of CHECKS) c[f] = $(f).checked;
+  c.photoFolder = $('photoFolder').value.trim();
   return c;
 }
 function saveForm() { store.set('form', cfg()); validate(); }
@@ -247,10 +248,38 @@ $('scrBtn').onclick = () => refreshScreen();
 setInterval(() => { if (S.running || S.busy) refreshScreen(false); }, 1500);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshScreen(); });
 
+// ---------- rasm papkasi ----------
+async function saveFolder() {
+  const folder = $('photoFolder').value.trim();
+  if (!folder) { $('photoFolderInfo').textContent = 'Papka tanlanmagan'; return; }
+  try {
+    const r = await api('/api/photo-folder', { folder });
+    $('photoFolderInfo').textContent = `${r.count} ta rasm`;
+    store.set('photoFolder', folder);
+  } catch (e) { $('photoFolderInfo').textContent = e.message; toast(e.message, 'error'); }
+}
+$('photoFolder').addEventListener('change', saveFolder);
+$('photoFolder').addEventListener('blur', saveFolder);
+$('photoPush').onclick = async () => {
+  if (!S.serial) { toast('Qurilma tanlanmagan', 'error'); return; }
+  const folder = $('photoFolder').value.trim();
+  if (!folder) { toast('Avval rasm papkasini kiriting', 'error'); return; }
+  $('photoPush').disabled = true;
+  try {
+    const r = await api('/api/photo-push-random', { serial: S.serial, folder });
+    $('photoPushInfo').textContent = `Jo'natildi: ${r.file} (${r.count} tadan)`;
+    toast(`Rasm jo'natildi: ${r.file}`);
+  } catch (e) { $('photoPushInfo').textContent = e.message; toast(e.message, 'error'); }
+  finally { $('photoPush').disabled = false; }
+};
+
 // ---------- boshlash ----------
 (async () => {
   const server = await api('/api/config').catch(() => ({}));
   applyForm(Object.assign({}, server, store.get('form') || {}));
+  const pf = server.photoFolder || store.get('photoFolder') || '';
+  $('photoFolder').value = pf;
+  if (pf) saveFolder();
   if (!S.season) setSeason('Тўқсонбости'); else setSeason(S.season);
   renderRun();
   connect();

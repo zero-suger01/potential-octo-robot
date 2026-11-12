@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { listDevices, Device } = require('./lib/adb');
 const { Bot } = require('./lib/bot');
+const { pushRandom, listImages } = require('./lib/photo-push');
 const { DATA, RUNS, openExternal } = require('./lib/platform');
 
 const PORT = +process.env.PORT || 4173;
@@ -67,12 +68,31 @@ const routes = {
       operator: String(b.operator || '').trim(),
       // Xatlov: 1|2|3 qo'lda tanlangan, 0/bo'sh — sanadan avtomatik
       campaign: +b.campaign || 0,
+      // Mac'dagi rasm papkasi — har xonadonda bot tasodifiy rasmni planshetga uzatadi
+      photoFolder: String(b.photoFolder || '').trim(),
     }, emit);
     emit({ type: 'running', running: true });
     bot.run().finally(() => { bot = null; emit({ type: 'running', running: false }); });
     return { ok: true };
   },
   'POST /api/stop': async () => { bot?.stop(); return { ok: true }; },
+  'POST /api/photo-folder': async (b) => {
+    const folder = String(b.folder || '').trim();
+    const cfg = JSON.parse(fs.existsSync(CFG_FILE) ? fs.readFileSync(CFG_FILE, 'utf8') : '{}');
+    cfg.photoFolder = folder;
+    fs.mkdirSync(path.dirname(CFG_FILE), { recursive: true });
+    fs.writeFileSync(CFG_FILE, JSON.stringify(cfg, null, 1));
+    return { folder, count: listImages(folder).length };
+  },
+  'POST /api/photo-push-random': async (b) => {
+    if (!b.serial) throw new Error('Qurilma tanlanmagan');
+    const cfg = JSON.parse(fs.existsSync(CFG_FILE) ? fs.readFileSync(CFG_FILE, 'utf8') : '{}');
+    const folder = String(b.folder || cfg.photoFolder || '').trim();
+    if (!folder) throw new Error('Rasm papkasi tanlanmagan');
+    const r = await pushRandom(b.serial, folder);
+    emit({ type: 'photo-pushed', file: r.file, count: r.count });
+    return r;
+  },
   'POST /api/reveal': async () => { fs.mkdirSync(RUNS, { recursive: true }); openExternal(RUNS); return { ok: true }; },
   'GET /api/report': async (b, req, res) => {
     const id = path.basename(new URL(req.url, 'http://x').searchParams.get('run') || '');
